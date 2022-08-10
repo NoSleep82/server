@@ -2167,7 +2167,15 @@ class CalDavBackend extends AbstractBackend implements SyncSupport, Subscription
 
 	/**
 	 * Searches through all of a users calendars and calendar objects to find
-	 * an object with a specific UID and will return the complete object
+	 * an object with a specific UID and will return the object.
+	 * Could theoretically return more than one object as we're searching the whole
+	 * principal (UIDs are only unqiue across calendars, not principals)
+	 * thus the result is sorted by the Last_modified time and only the first result is
+	 * returned.
+	 *
+	 * As this method is (at this moment in time) used to compare it with
+	 * incoming scheduling data, the possibility of duplicates across the principal
+	 * collection is not a problem.
 	 *
 	 * @throws Exception
 	 */
@@ -2178,7 +2186,8 @@ class CalDavBackend extends AbstractBackend implements SyncSupport, Subscription
 			->leftJoin('co', 'calendars', 'c', $query->expr()->eq('co.calendarid', 'c.id'))
 			->where($query->expr()->eq('c.principaluri', $query->createNamedParameter($principalUri)))
 			->andWhere($query->expr()->eq('co.uid', $query->createNamedParameter($uid)))
-			->andWhere($query->expr()->isNull('co.deleted_at'));
+			->andWhere($query->expr()->isNull('co.deleted_at'))
+			->orderBy('co.lastmodified');
 		$stmt = $query->executeQuery();
 		$row = $stmt->fetch();
 		$stmt->closeCursor();

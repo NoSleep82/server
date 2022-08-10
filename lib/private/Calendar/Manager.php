@@ -263,7 +263,10 @@ class Manager implements IManager {
 		return new CalendarQuery($principalUri);
 	}
 
-	// REPLY: the attendee has to be updated in the ORGANIZER calendar
+	/**
+	 * @since 25.0.0
+	 * @throws \OCP\DB\Exception
+	 */
 	public function handleIMipReply(string $principalUri, string $sender, string $recipient, string $calendarData): bool {
 		/** @var VCalendar $vObject */
 		$vObject = Reader::read($calendarData);
@@ -343,6 +346,7 @@ class Manager implements IManager {
 		if (!$calendar) {
 			return false;
 		}
+
 		// Check if this is a writable calendar
 		if (!($calendar instanceof ICreateFromString)) {
 			$this->logger->error('Could not update calendar for iMIP processing as calendar' . $calendar->getUri() . 'is not writable');
@@ -366,7 +370,10 @@ class Manager implements IManager {
 		return true;
 	}
 
-	// CANCEL: the event has to be updated in the ATTENDEEs calendar
+	/**
+	 * @since 25.0.0
+	 * @throws \OCP\DB\Exception
+	 */
 	public function handleIMipCancel(string $principalUri, string $sender, ?string $replyTo, string $recipient, string $calendarData): bool {
 		$vObject = Reader::read($calendarData);
 		/** @var VEvent $vEvent */
