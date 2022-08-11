@@ -16,8 +16,11 @@ class ExifProvider implements IMetadataProvider {
 	}
 
 	public function execute(File $file): array {
-		$fileDescriptor = $file->fopen('rb');
-		$data = @exif_read_data($fileDescriptor, 'ANY_TAG', true);
+		$exifData = [];
+		// $fileDescriptor = $file->fopen('rb');
+		// $data = exif_read_data($fileDescriptor, 'ANY_TAG', true);
+		// $data = exif_read_data($file->getContent(), 'ANY_TAG', true);
+		$data = exif_read_data($file->getStorage()->getLocalFile($file->getInternalPath()), 'ANY_TAG', true);
 
 		$size = new FileMetadata();
 		$size->setGroupName('size');
@@ -33,27 +36,50 @@ class ExifProvider implements IMetadataProvider {
 				]);
 			}
 
-			return [
-				'size' => $size,
-			];
+			$exifData['size'] = $size;
+		} else if (array_key_exists('COMPUTED', $data)) {
+			if (array_key_exists('Width', $data['COMPUTED']) && array_key_exists('Height', $data['COMPUTED'])) {
+				$size->setMetadata([
+					'width' => $data['COMPUTED']['Width'],
+					'height' => $data['COMPUTED']['Height'],
+				]);
+			}
+
+			$exifData['size'] = $size;
 		}
 
-		if (array_key_exists('COMPUTED', $data)
-			&& array_key_exists('Width', $data['COMPUTED'])
-			&& array_key_exists('Height', $data['COMPUTED'])
-		) {
-			$size->setMetadata([
-				'width' => $data['COMPUTED']['Width'],
-				'height' => $data['COMPUTED']['Height'],
+		if ($data && array_key_exists('GPS', $data)) {
+			$gps = new FileMetadata();
+			$gps->setGroupName('gps');
+			$gps->setId($file->getId());
+			$gps->setMetadata([
+				'coordinate' => [
+					'latitude' => $this->gpsDegreesToDecimal($data['GPS']['GPSLatitude'], $data['GPS']['GPSLatitudeRef']),
+					'longitude' => $this->gpsDegreesToDecimal($data['GPS']['GPSLongitude'], $data['GPS']['GPSLongitudeRef']),
+				],
 			]);
+
+			$exifData['gps'] = $gps;
 		}
 
-		return [
-			'size' => $size,
-		];
+		return $exifData;
 	}
 
 	public static function getMimetypesSupported(): string {
 		return '/image\/.*/';
+	}
+
+	private static function gpsDegreesToDecimal(array $coordinates, string $hemisphere): float {
+		if (is_string($coordinates)) {
+			$coordinates = array_map("trim", explode(",", $coordinates));
+		}
+
+		[$degrees, $minutes, $seconds] = array_map(function ($rawDegree) {
+			[$degree, $dividend] = explode('/', $rawDegree);
+			return floatval($degree)/floatval($dividend ?? 1);
+		}, $coordinates);
+
+		$sign = ($hemisphere === 'W' || $hemisphere === 'S') ? -1 : 1;
+		return $sign * ($degrees + $minutes/60 + $seconds/3600);
 	}
 }
