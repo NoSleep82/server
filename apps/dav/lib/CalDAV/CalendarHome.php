@@ -211,7 +211,7 @@ class CalendarHome extends \Sabre\CalDAV\CalendarHome {
 	}
 
 	/**
-	 * @since 25.0.ß
+	 * @since 25.0.0
 	 *
 	 * @throws \OCP\DB\Exception
 	 */
