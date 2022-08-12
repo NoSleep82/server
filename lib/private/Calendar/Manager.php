@@ -27,7 +27,6 @@ declare(strict_types=1);
 namespace OC\Calendar;
 
 use OC\AppFramework\Bootstrap\Coordinator;
-use OCA\DAV\CalDAV\CalendarHome;
 use OCP\AppFramework\Utility\ITimeFactory;
 use OCP\Calendar\Exceptions\CalendarException;
 use OCP\Calendar\ICalendar;
@@ -213,27 +212,6 @@ class Manager implements IManager {
 		);
 	}
 
-	public function getCalendarHome(string $principalUri): ?CalendarHome {
-		$context = $this->coordinator->getRegistrationContext();
-		if ($context === null) {
-			return null;
-		}
-
-		foreach ($context->getCalendarProviders() as $registration) {
-			try {
-				/** @var ICalendarProvider $provider */
-				$provider = $this->container->get($registration->getService());
-			} catch (Throwable $e) {
-				$this->logger->error('Could not load calendar provider ' . $registration->getService() . ': ' . $e->getMessage(), [
-					'exception' => $e,
-				]);
-				continue;
-			}
-			return $provider->provideCalendarHome($principalUri);
-		}
-		return null;
-	}
-
 	public function searchForPrincipal(ICalendarQuery $query): array {
 		/** @var CalendarQuery $query */
 		$calendars = $this->getCalendarsForPrincipal(
@@ -279,6 +257,8 @@ class Manager implements IManager {
 			return false;
 		}
 
+		unset($vObject->{'METHOD'});
+
 		// check if mail recipient and organizer are one and the same
 		$organizer = substr($vEvent->{'ORGANIZER'}->getValue(), 7);
 
@@ -295,74 +275,32 @@ class Manager implements IManager {
 			return false;
 		}
 
-		$original = $this->getCalendarHome($principalUri)->searchPrincipalByUid($principalUri, $vEvent->{'UID'}->getValue());
-		if (empty($original)) {
-			$this->logger->info('Event not found in calendar for principal ' . $principalUri . 'and UID' . $vEvent->{'UID'}->getValue());
-			return false;
-		}
 
-		$originalVObject = Reader::read($original['calendardata']);
-		/** @var VEvent $originalVevent */
-		$originalVevent = $originalVObject->{'VEVENT'};
-		// check if the organizer in the attached calendar data is the one in the original event
-		if (strcasecmp($originalVevent->{'ORGANIZER'}->getValue(), $vEvent->{'ORGANIZER'}->getValue()) !== 0) {
-			$this->logger->warning('Invalid ORGANIZER passed for REPLY');
-			return false;
-		}
-
-		// we need to compare the email address the REPLY is coming from (in Mail)
-		// to the email address in the ATTENDEE as specified in the RFC
-		$attendee = substr($vEvent->{'ATTENDEE'}->getValue(), 7);
-
-		if (strcasecmp($sender, $attendee) !== 0) {
-			$this->logger->warning('Party crashing is not supported for iMIP replies');
-			return false;
-		}
-
-		if (!isset($originalVevent->ATTENDEE)) {
-			$this->logger->warning('No attendees set in original VEVENT.');
-			return false;
-		}
-
-		// Sabre is also doing this but is letting newly added attendees "party crash"
-		// but we should not allow ATTENDEE modification here
-		$found = false;
-		foreach ($originalVevent->ATTENDEE as $a) {
-			if (strcasecmp($a->getValue(), $vEvent->{'ATTENDEE'}->getValue()) === 0) {
-				$found = true;
-				break;
+		$calendars = $this->getCalendarsForPrincipal($principalUri);
+		$found = null;
+		// if the attendee has been found in at least one calendar event with the UID of the iMIP event
+		// we process it.
+		// Benefit: no attendee lost
+		// Drawback: attendees that have been deleted will still be able to update their partstat
+		foreach ($calendars as $calendar) {
+			// We should not search in writable calendars
+			if ($calendar instanceof ICreateFromString) {
+				$o = $calendar->search($sender, ['ATTENDEE'], ['uid' => $vEvent->{'UID'}->getValue()]);
+				if (!empty($o)) {
+					$found = $calendar;
+					break;
+				}
 			}
 		}
-		if (!$found) {
-			$this->logger->warning('Party crashing is not supported for iMIP replies');
+
+		if (empty($found)) {
+			$this->logger->info('Event not found in any calendar for principal ' . $principalUri . 'and UID' . $vEvent->{'UID'}->getValue());
 			return false;
 		}
 
-		/** @var ICreateFromString $calendar */
-		$calendar = current(array_filter($this->getCalendarsForPrincipal($principalUri), function ($calendar) use ($original) {
-			return $calendar->getKey() === $original['calendarid'];
-		}));
-
-		if (!$calendar) {
-			return false;
-		}
-
-		// Check if this is a writable calendar
-		if (!($calendar instanceof ICreateFromString)) {
-			$this->logger->error('Could not update calendar for iMIP processing as calendar' . $calendar->getUri() . 'is not writable');
-			return false;
-		}
-
-		$iTipMessage = new Message();
-		$iTipMessage->recipient = $vEvent->{'ORGANIZER'}->getValue();
-		$iTipMessage->uid = $vEvent->{'UID'}->getValue();
-		$iTipMessage->component = 'VEVENT';
-		$iTipMessage->method = 'REPLY';
-		$iTipMessage->sequence = $vEvent->{'SEQUENCE'}->getValue() ?? 0;
-		$iTipMessage->sender = $vEvent->{'ATTENDEE'}->getValue();
-		$iTipMessage->message = $vObject;
 		try {
-			$calendar->handleIMipMessage($iTipMessage); // sabre will handle the scheduling behind the scenes
+			$name = time();
+			$found->createFromString($name.'.ics', $vObject->serialize()); // sabre will handle the scheduling behind the scenes
 		} catch (CalendarException $e) {
 			$this->logger->error('Could not update calendar for iMIP processing', ['exception' => $e]);
 			return false;

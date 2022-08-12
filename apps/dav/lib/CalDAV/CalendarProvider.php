@@ -52,9 +52,6 @@ class CalendarProvider implements ICalendarProvider {
 		$this->logger = $logger;
 	}
 
-	/**
-	 * @return ICreateFromString[]
-	 */
 	public function getCalendars(string $principalUri, array $calendarUris = []): array {
 		$calendarInfos = [];
 		if (empty($calendarUris)) {
