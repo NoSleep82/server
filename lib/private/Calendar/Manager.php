@@ -295,7 +295,7 @@ class Manager implements IManager {
 		}
 
 		try {
-			$found->handleIMipMessage($name, $vObject->serialize()); // sabre will handle the scheduling behind the scenes
+			$found->handleIMipMessage($name, $calendarData); // sabre will handle the scheduling behind the scenes
 		} catch (CalendarException $e) {
 			$this->logger->error('Could not update calendar for iMIP processing', ['exception' => $e]);
 			return false;
@@ -360,7 +360,7 @@ class Manager implements IManager {
 		}
 
 		try {
-			$found->handleIMipMessage($name, $vObject->serialize()); // sabre will handle the scheduling behind the scenes
+			$found->handleIMipMessage($name, $calendarData); // sabre will handle the scheduling behind the scenes
 			return true;
 		} catch (CalendarException $e) {
 			$this->logger->error('Could not update calendar for iMIP processing', ['exception' => $e]);
