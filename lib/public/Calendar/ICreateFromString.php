@@ -25,7 +25,6 @@ declare(strict_types=1);
 namespace OCP\Calendar;
 
 use OCP\Calendar\Exceptions\CalendarException;
-use Sabre\VObject\ITip\Message;
 
 /**
  * Extends the current ICalendar interface
@@ -47,5 +46,5 @@ interface ICreateFromString extends ICalendar {
 	 *
 	 * @throws CalendarException
 	 */
-	public function handleIMipMessage(Message $iTipMessage): void;
+	public function handleIMipMessage(string $name, string $calendarData): void;
 }

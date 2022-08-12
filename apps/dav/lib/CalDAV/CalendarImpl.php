@@ -181,11 +181,12 @@ class CalendarImpl implements ICreateFromString {
 	}
 
 	/**
-	 * @param Message $iTipMessage
+	 * @param string $name
+	 * @param string $calendarData
 	 * @return void
 	 * @throws CalendarException
 	 */
-	public function handleIMipMessage(Message $iTipMessage): void {
+	public function handleIMipMessage(string $name, string $calendarData): void {
 		$server = new InvitationResponseServer(false);
 
 		/** @var CustomPrincipalPlugin $plugin */
@@ -202,6 +203,26 @@ class CalendarImpl implements ICreateFromString {
 		/** @var Schedule\Plugin $schedulingPlugin */
 		$schedulingPlugin = $server->server->getPlugin('caldav-schedule');
 		// Let sabre handle the rest
+		$iTipMessage = new Message();
+		$vObject = Reader::read($calendarData);
+		$vEvent = $vObject->{'VEVENT'};
+
+		$iTipMessage->method = $vObject->{'METHOD'}->getValue();
+		if($iTipMessage->method === 'REPLY') {
+			if ($server->isExternalAttendee($vEvent->{'ATTENDEE'}->getValue())) {
+				$iTipMessage->recipient = $vEvent->{'ORGANIZER'}->getValue();
+			} else {
+				$iTipMessage->recipient = $vEvent->{'ATTENDEE'}->getValue();
+			}
+			$iTipMessage->sender = $vEvent->{'ATTENDEE'}->getValue();
+		} elseIf($iTipMessage->method === 'CANCEL') {
+			$iTipMessage->recipient = $vEvent->{'ATTENDEE'}->getValue();
+			$iTipMessage->sender = $vEvent->{'ORGANIZER'}->getValue();
+		}
+		$iTipMessage->uid = $vEvent->{'UID'}->getValue();
+		$iTipMessage->component = 'VEVENT';
+		$iTipMessage->sequence = $vEvent->{'SEQUENCE'}->getValue() ?? 0;
+		$iTipMessage->message = $vObject;
 		$schedulingPlugin->scheduleLocalDelivery($iTipMessage);
 	}
 }

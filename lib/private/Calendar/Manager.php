@@ -39,7 +39,6 @@ use Psr\Container\ContainerInterface;
 use Psr\Log\LoggerInterface;
 use Sabre\VObject\Component\VCalendar;
 use Sabre\VObject\Component\VEvent;
-use Sabre\VObject\ITip\Message;
 use Sabre\VObject\Property\VCard\DateTime;
 use Sabre\VObject\Reader;
 use Throwable;
@@ -257,8 +256,6 @@ class Manager implements IManager {
 			return false;
 		}
 
-		unset($vObject->{'METHOD'});
-
 		// check if mail recipient and organizer are one and the same
 		$organizer = substr($vEvent->{'ORGANIZER'}->getValue(), 7);
 
@@ -270,11 +267,10 @@ class Manager implements IManager {
 		//check if the event is in the future
 		/** @var DateTime $eventTime */
 		$eventTime = $vEvent->{'DTSTART'};
-		if ($eventTime->getDateTime()->getTimeStamp() < $this->timeFactory->getDateTime()->getTimestamp()) { // this might cause issues with recurrences
+		if ($eventTime->getDateTime()->getTimeStamp() < $this->timeFactory->getTime()) { // this might cause issues with recurrences
 			$this->logger->warning('Only events in the future are processed');
 			return false;
 		}
-
 
 		$calendars = $this->getCalendarsForPrincipal($principalUri);
 		$found = null;
@@ -288,6 +284,7 @@ class Manager implements IManager {
 				$o = $calendar->search($sender, ['ATTENDEE'], ['uid' => $vEvent->{'UID'}->getValue()]);
 				if (!empty($o)) {
 					$found = $calendar;
+					$name = $o[0]['uri'];
 					break;
 				}
 			}
@@ -299,8 +296,7 @@ class Manager implements IManager {
 		}
 
 		try {
-			$name = time();
-			$found->createFromString($name.'.ics', $vObject->serialize()); // sabre will handle the scheduling behind the scenes
+			$found->handleIMipMessage($name, $vObject->serialize()); // sabre will handle the scheduling behind the scenes
 		} catch (CalendarException $e) {
 			$this->logger->error('Could not update calendar for iMIP processing', ['exception' => $e]);
 			return false;
@@ -339,58 +335,33 @@ class Manager implements IManager {
 			return false;
 		}
 
-		//check if the event is in the future
-		/** @var DateTime $eventTime */
-		$eventTime = $vEvent->{'DTSTART'};
-		if ($eventTime->getDateTime()->getTimeStamp() < $this->timeFactory->getDateTime()->getTimestamp()) { // this might cause issues with recurrences
-			$this->logger->warning('Only events in the future are processed');
-			return false;
+		$calendars = $this->getCalendarsForPrincipal($principalUri);
+		$found = null;
+		// if the attendee has been found in at least one calendar event with the UID of the iMIP event
+		// we process it.
+		// Benefit: no attendee lost
+		// Drawback: attendees that have been deleted will still be able to update their partstat
+		foreach ($calendars as $calendar) {
+			// We should not search in writable calendars
+			if ($calendar instanceof ICreateFromString) {
+				$o = $calendar->search($recipient, ['ATTENDEE'], ['uid' => $vEvent->{'UID'}->getValue()]);
+				if (!empty($o)) {
+					$found = $calendar;
+					$name = $o[0]['uri'];
+					break;
+				}
+			}
 		}
 
-		// Look for the original calendar the event was set in
-		$original = $this->getCalendarHome($principalUri)->searchPrincipalByUid($principalUri, $vEvent->{'UID'}->getValue());
-		if (empty($original)) {
-			$this->logger->info('Event not found in calendar for principal ' . $principalUri . 'and UID' . $vEvent->{'UID'}->getValue());
+		if (empty($found)) {
+			$this->logger->info('Event not found in any calendar for principal ' . $principalUri . 'and UID' . $vEvent->{'UID'}->getValue());
 			// this is a safe operation
-			// we can ignore objects that are unavailable
+			// we can ignore events that have been cancelled but were not in the calendar anyway
 			return true;
 		}
 
-		$originalVObject = Reader::read($original['calendardata']);
-		/** @var VEvent $originalVevent */
-		$originalVevent = $originalVObject->{'VEVENT'};
-		// check if the organizer in the attached calendar data is the one in the original event
-		if (strcasecmp($originalVevent->{'ORGANIZER'}->getValue(), $vEvent->{'ORGANIZER'}->getValue()) !== 0) {
-			$this->logger->warning('Invalid ORGANIZER passed for CANCEL');
-			return false;
-		}
-
-		// we don't need to check ATTENDEEs - sabre will ignore the event if it wasn't in the calendar to begin with
-
-		$calendar = current(array_filter($this->getCalendarsForPrincipal($principalUri), function ($calendar) use ($original) {
-			return $calendar->getKey() === $original['calendarid'];
-		}));
-
-		if (!$calendar) {
-			$this->logger->error('Could not find calendar to write REPLY to');
-			return false;
-		}
-
-		// Check if this is a writable calendar
-		if (!($calendar instanceof ICreateFromString)) {
-			$this->logger->error('Could not update calendar for iMIP processing as calendar' . $calendar->getUri() . 'is not writable');
-			return false;
-		}
-
-		$iTipMessage = new Message();
-		$iTipMessage->uid = $vEvent->{'UID'}->getValue();
-		$iTipMessage->recipient = $vEvent->{'ATTENDEE'}->getValue();
-		$iTipMessage->component = 'VEVENT';
-		$iTipMessage->method = 'CANCEL';
-		$iTipMessage->sequence = $vEvent->{'SEQUENCE'}->getValue() ?? 0;
-		$iTipMessage->message = $vObject;
 		try {
-			$calendar->handleIMipMessage($iTipMessage);
+			$found->handleIMipMessage($name, $vObject->serialize()); // sabre will handle the scheduling behind the scenes
 			return true;
 		} catch (CalendarException $e) {
 			$this->logger->error('Could not update calendar for iMIP processing', ['exception' => $e]);
