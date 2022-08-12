@@ -181,9 +181,6 @@ class CalendarImpl implements ICreateFromString {
 	}
 
 	/**
-	 * @param string $name
-	 * @param string $calendarData
-	 * @return void
 	 * @throws CalendarException
 	 */
 	public function handleIMipMessage(string $name, string $calendarData): void {
@@ -204,8 +201,14 @@ class CalendarImpl implements ICreateFromString {
 		$schedulingPlugin = $server->server->getPlugin('caldav-schedule');
 		// Let sabre handle the rest
 		$iTipMessage = new Message();
+		/** @var VCalendar $vObject */
 		$vObject = Reader::read($calendarData);
+		/** @var VEvent $vEvent */
 		$vEvent = $vObject->{'VEVENT'};
+
+		if($vObject->{'METHOD'} === null) {
+			throw new CalendarException('No Method provided for schedule data. Could not process message');
+		}
 
 		$iTipMessage->method = $vObject->{'METHOD'}->getValue();
 		if($iTipMessage->method === 'REPLY') {
@@ -215,7 +218,7 @@ class CalendarImpl implements ICreateFromString {
 				$iTipMessage->recipient = $vEvent->{'ATTENDEE'}->getValue();
 			}
 			$iTipMessage->sender = $vEvent->{'ATTENDEE'}->getValue();
-		} elseIf($iTipMessage->method === 'CANCEL') {
+		} else if($iTipMessage->method === 'CANCEL') {
 			$iTipMessage->recipient = $vEvent->{'ATTENDEE'}->getValue();
 			$iTipMessage->sender = $vEvent->{'ORGANIZER'}->getValue();
 		}

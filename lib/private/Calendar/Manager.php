@@ -241,7 +241,6 @@ class Manager implements IManager {
 	}
 
 	/**
-	 * @since 25.0.0
 	 * @throws \OCP\DB\Exception
 	 */
 	public function handleIMipReply(string $principalUri, string $sender, string $recipient, string $calendarData): bool {

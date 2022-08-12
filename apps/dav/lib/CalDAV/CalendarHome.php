@@ -209,16 +209,4 @@ class CalendarHome extends \Sabre\CalDAV\CalendarHome {
 	public function enableCachedSubscriptionsForThisRequest() {
 		$this->returnCachedSubscriptions = true;
 	}
-
-	/**
-	 * @since 25.0.0
-	 *
-	 * @throws \OCP\DB\Exception
-	 */
-	public function searchPrincipalByUid(string $principalUri, string $uid): ?array {
-		if($this->caldavBackend instanceof CalDavBackend) {
-			return $this->caldavBackend->searchPrincipalByUid($principalUri, $uid);
-		}
-		return null;
-	}
 }

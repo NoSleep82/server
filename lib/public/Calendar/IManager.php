@@ -160,11 +160,6 @@ interface IManager {
 	/**
 	 * Handle a iMip REPLY message
 	 *
-	 * @param string $principalUri
-	 * @param string $sender
-	 * @param string $recipient
-	 * @param string $calendarData
-	 * @return bool
 	 * @since 25.0.0
 	 */
 	public function handleIMipReply(string $principalUri, string $sender, string $recipient, string $calendarData): bool;
@@ -172,11 +167,7 @@ interface IManager {
 	/**
 	 * Handle a iMip CANCEL message
 	 *
-	 * @param string $principalUri
-	 * @param string $sender
-	 * @param string $recipient
-	 * @param string $calendarData
-	 * @return mixed
+	 * @since 25.0.0
 	 */
 	public function handleIMipCancel(string $principalUri, string $sender, ?string $replyTo, string $recipient, string $calendarData): bool;
 }
