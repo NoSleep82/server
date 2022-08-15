@@ -207,24 +207,30 @@ class CalendarImpl implements ICreateFromString {
 		$vEvent = $vObject->{'VEVENT'};
 
 		if($vObject->{'METHOD'} === null) {
-			throw new CalendarException('No Method provided for schedule data. Could not process message');
+			throw new CalendarException('No Method provided for scheduling data. Could not process message');
 		}
+
+		if(!isset($vEvent->{'ORGANIZER'}) || !isset($vEvent->{'ATTENDEE'})) {
+			throw new CalendarException('Could not process scheduling data, neccessary data missing from ICAL');
+		}
+		$orgaizer = $vEvent->{'ORGANIZER'}->getValue();
+		$attendee = $vEvent->{'ATTENDEE'}->getValue();
 
 		$iTipMessage->method = $vObject->{'METHOD'}->getValue();
 		if($iTipMessage->method === 'REPLY') {
 			if ($server->isExternalAttendee($vEvent->{'ATTENDEE'}->getValue())) {
-				$iTipMessage->recipient = $vEvent->{'ORGANIZER'}->getValue();
+				$iTipMessage->recipient = $orgaizer;
 			} else {
-				$iTipMessage->recipient = $vEvent->{'ATTENDEE'}->getValue();
+				$iTipMessage->recipient = $attendee;
 			}
-			$iTipMessage->sender = $vEvent->{'ATTENDEE'}->getValue();
+			$iTipMessage->sender = $attendee;
 		} else if($iTipMessage->method === 'CANCEL') {
-			$iTipMessage->recipient = $vEvent->{'ATTENDEE'}->getValue();
-			$iTipMessage->sender = $vEvent->{'ORGANIZER'}->getValue();
+			$iTipMessage->recipient = $attendee;
+			$iTipMessage->sender = $orgaizer;
 		}
-		$iTipMessage->uid = $vEvent->{'UID'}->getValue();
+		$iTipMessage->uid = isset($vEvent->{'UID'}) ? $vEvent->{'UID'}->getValue() : '';
 		$iTipMessage->component = 'VEVENT';
-		$iTipMessage->sequence = $vEvent->{'SEQUENCE'}->getValue() ?? 0;
+		$iTipMessage->sequence = isset($vEvent->{'SEQUENCE'}) ? (int)$vEvent->{'SEQUENCE'}->getValue() : 0;
 		$iTipMessage->message = $vObject;
 		$schedulingPlugin->scheduleLocalDelivery($iTipMessage);
 	}
