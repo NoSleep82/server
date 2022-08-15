@@ -75,8 +75,4 @@ class CalendarProvider implements ICalendarProvider {
 		}
 		return $iCalendars;
 	}
-
-	public function provideCalendarHome(string $principalUri): CalendarHome {
-		return new CalendarHome($this->calDavBackend, $principalUri, $this->logger);
-	}
 }
