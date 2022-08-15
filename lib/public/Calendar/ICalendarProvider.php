@@ -42,3 +42,4 @@ interface ICalendarProvider {
 	 * @since 23.0.0
 	 */
 	public function getCalendars(string $principalUri, array $calendarUris = []): array;
+}
