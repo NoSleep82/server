@@ -64,8 +64,6 @@
   width: 100%;
   z-index: 2000;
   height: 50px;
-  background-color: var(--color-primary);
-  background-image: var(--gradient-primary-background);
   box-sizing: border-box;
   justify-content: space-between;
 }
@@ -209,7 +207,6 @@
   left: 12px;
   top: 1px;
   bottom: 1px;
-  filter: var(--image-logoheader-custom, var(--primary-invert-if-bright));
 }
 #header .header-appname-container {
   display: none;
@@ -513,7 +510,6 @@ nav[role=navigation] {
 #appmenu li svg,
 #appmenu li .icon-more-white {
   transition: transform var(--animation-quick) ease;
-  filter: var(--primary-invert-if-bright);
 }
 #appmenu li a::before {
   transition: border var(--animation-quick) ease;

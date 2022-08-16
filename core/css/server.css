@@ -2292,8 +2292,6 @@ label.infield {
   width: 100%;
   z-index: 2000;
   height: 50px;
-  background-color: var(--color-primary);
-  background-image: var(--gradient-primary-background);
   box-sizing: border-box;
   justify-content: space-between;
 }
@@ -2437,7 +2435,6 @@ label.infield {
   left: 12px;
   top: 1px;
   bottom: 1px;
-  filter: var(--image-logoheader-custom, var(--primary-invert-if-bright));
 }
 #header .header-appname-container {
   display: none;
@@ -2741,7 +2738,6 @@ nav[role=navigation] {
 #appmenu li svg,
 #appmenu li .icon-more-white {
   transition: transform var(--animation-quick) ease;
-  filter: var(--primary-invert-if-bright);
 }
 #appmenu li a::before {
   transition: border var(--animation-quick) ease;
@@ -3149,6 +3145,12 @@ audio.icon-loading-small-dark, canvas.icon-loading-small-dark, embed.icon-loadin
  *
  * @returns A background image with the url to the set to the requested icon.
  */
+body {
+  background: url("/apps/dashboard/img/kamil-porembinski-clouds.jpg");
+  background-size: contain;
+  position: fixed;
+}
+
 /* BASE STYLING ------------------------------------------------------------ */
 h2 {
   font-weight: bold;
@@ -3209,24 +3211,20 @@ kbd {
 /* Navigation: folder like structure */
 #app-navigation:not(.vue) {
   width: 300px;
-  position: fixed;
-  top: 50px;
-  left: 0;
   z-index: 500;
-  overflow-y: auto;
+  overflow-y: scroll;
   overflow-x: hidden;
-  height: calc(100% - 50px);
-  box-sizing: border-box;
   background-color: var(--color-main-background);
   -webkit-user-select: none;
   -moz-user-select: none;
   -ms-user-select: none;
   user-select: none;
-  border-right: 1px solid var(--color-border);
   display: flex;
   flex-direction: column;
   flex-grow: 0;
   flex-shrink: 0;
+  background-color: rgba(255, 255, 255, 0.8);
+  backdrop-filter: blur(10px);
   /* 'New' button */
   /**
    * Button styling for menu, edit and undo
@@ -3282,6 +3280,13 @@ kbd {
   flex-wrap: wrap;
   order: 1;
   flex-shrink: 0;
+  margin-left: 8px;
+  margin-right: 8px;
+  margin-top: 3px;
+  margin-bottom: 3px;
+  width: calc(100% - 16px);
+  overflow: hidden;
+  border-radius: var(--border-radius-pill);
   /* Pinned-to-bottom entries */
   /* align loader */
   /* hide deletion/collapse of subitems */
@@ -3310,7 +3315,6 @@ kbd {
   background-color: var(--color-background-hover);
 }
 #app-navigation:not(.vue) > ul > li a:focus-visible {
-  border-radius: var(--border-radius);
   box-shadow: var(--color-primary) inset 0 0 0 2px;
   outline: none;
 }
@@ -3385,7 +3389,6 @@ kbd {
 #app-navigation:not(.vue) > ul > li,
 #app-navigation:not(.vue) > ul > li > ul > li {
   position: relative;
-  width: 100%;
   box-sizing: border-box;
   /* hide icons if loading */
   /* Main entry link */
@@ -3705,10 +3708,15 @@ kbd {
 /* CONTENT  --------------------------------------------------------- */
 #content {
   box-sizing: border-box;
-  position: relative;
-  display: flex;
-  padding-top: 50px;
+  position: static;
   min-height: 100%;
+  margin: 8px;
+  margin-top: 50px;
+  display: flex;
+  height: calc(100vh - 50px - 8px);
+  border-radius: var(--border-radius-large);
+  box-sizing: content-box;
+  overflow-y: scroll;
 }
 
 /* APP-CONTENT AND WRAPPER ------------------------------------------ */
@@ -3721,15 +3729,12 @@ kbd {
 #app-content {
   z-index: 1000;
   background-color: var(--color-main-background);
-  position: relative;
   flex-basis: 100vw;
   min-height: 100%;
+  overflow-y: scroll;
   /* margin if navigation element is here */
   /* no top border for first settings item */
   /* if app-content-list is present */
-}
-#app-navigation:not(.hidden) + #app-content {
-  margin-left: 300px;
 }
 #app-content > .section:first-child {
   border-top: none;
@@ -3768,6 +3773,7 @@ kbd {
   overflow-y: auto;
   overflow-x: hidden;
   z-index: 1500;
+  opacity: 0.7px;
   height: calc(100vh - 50px);
   background: var(--color-main-background);
   border-left: 1px solid var(--color-border);
@@ -4240,6 +4246,7 @@ kbd {
 .popovermenu li > button.active,
 .popovermenu li > a.active,
 .popovermenu li > .menuitem.active {
+  border-radius: var(--border-radius-pill);
   background-color: var(--color-primary-light);
 }
 .bubble li > button.action,
