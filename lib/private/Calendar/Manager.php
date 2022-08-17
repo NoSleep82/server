@@ -34,7 +34,6 @@ use OCP\Calendar\ICalendarProvider;
 use OCP\Calendar\ICalendarQuery;
 use OCP\Calendar\ICreateFromString;
 use OCP\Calendar\IManager;
-use OCP\Security\ISecureRandom;
 use Psr\Container\ContainerInterface;
 use Psr\Log\LoggerInterface;
 use Sabre\VObject\Component\VCalendar;
@@ -68,18 +67,15 @@ class Manager implements IManager {
 
 	private ITimeFactory $timeFactory;
 
-	private ISecureRandom $random;
 
 	public function __construct(Coordinator $coordinator,
 								ContainerInterface $container,
 								LoggerInterface $logger,
-								ITimeFactory $timeFactory,
-								ISecureRandom $random) {
+								ITimeFactory $timeFactory) {
 		$this->coordinator = $coordinator;
 		$this->container = $container;
 		$this->logger = $logger;
 		$this->timeFactory = $timeFactory;
-		$this->random = $random;
 	}
 
 	/**
@@ -272,6 +268,11 @@ class Manager implements IManager {
 		}
 
 		$calendars = $this->getCalendarsForPrincipal($principalUri);
+		if (empty($calendars)) {
+			$this->logger->warning('Could not find any calendars for principal ' . $principalUri);
+			return false;
+		}
+
 		$found = null;
 		// if the attendee has been found in at least one calendar event with the UID of the iMIP event
 		// we process it.
@@ -329,7 +330,7 @@ class Manager implements IManager {
 		// to the email address in the ORGANIZER.
 		// We don't want to accept a CANCEL request from just anyone
 		$organizer = substr($vEvent->{'ORGANIZER'}->getValue(), 7);
-		if (strcasecmp($sender, $organizer) !== 0 || strcasecmp($replyTo, $organizer) !== 0) {
+		if (strcasecmp($sender, $organizer) !== 0 && strcasecmp($replyTo, $organizer) !== 0) {
 			$this->logger->warning('Sender must be the ORGANIZER of this event');
 			return false;
 		}
