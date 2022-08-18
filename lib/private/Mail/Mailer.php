@@ -48,6 +48,7 @@ use OCP\Mail\IAttachment;
 use OCP\Mail\IEMailTemplate;
 use OCP\Mail\IMailer;
 use OCP\Mail\IMessage;
+use OC\BinaryFinder;
 use Psr\Log\LoggerInterface;
 
 /**
@@ -71,19 +72,14 @@ use Psr\Log\LoggerInterface;
 class Mailer implements IMailer {
 	/** @var \Swift_Mailer Cached mailer */
 	private $instance = null;
-	/** @var IConfig */
-	private $config;
+	private IConfig $config;
 	private LoggerInterface $logger;
 	/** @var Defaults */
 	private $defaults;
-	/** @var IURLGenerator */
-	private $urlGenerator;
-	/** @var IL10N */
-	private $l10n;
-	/** @var IEventDispatcher */
-	private $dispatcher;
-	/** @var IFactory */
-	private $l10nFactory;
+	private IURLGenerator $urlGenerator;
+	private IL10N $l10n;
+	private IEventDispatcher $dispatcher;
+	private IFactory $l10nFactory;
 
 	public function __construct(IConfig $config,
 						 LoggerInterface $logger,
@@ -309,7 +305,7 @@ class Mailer implements IMailer {
 				$binaryPath = '/var/qmail/bin/sendmail';
 				break;
 			default:
-				$sendmail = \OC_Helper::findBinaryPath('sendmail');
+				$sendmail = \OCP\Server::get(BinaryFinder::class)->findBinaryPath('sendmail');
 				if ($sendmail === null) {
 					$sendmail = '/usr/sbin/sendmail';
 				}

@@ -335,7 +335,8 @@ class Server extends ServerContainer implements IServerContainer {
 				$c->get(GeneratorHelper::class),
 				$c->get(ISession::class)->get('user_id'),
 				$c->get(Coordinator::class),
-				$c->get(IServerContainer::class)
+				$c->get(IServerContainer::class),
+				$c->get(BinaryFinder::class)
 			);
 		});
 		/** @deprecated 19.0.0 */
