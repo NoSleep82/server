@@ -132,12 +132,8 @@ abstract class Base implements IProvider {
 	 * @param string $uid
 	 * @return string
 	 */
-	protected function getUserDisplayName($uid) {
-		$user = $this->userManager->get($uid);
-		if ($user instanceof IUser) {
-			return $user->getDisplayName();
-		}
-		return $uid;
+	protected function getUserDisplayName(string $uid): string {
+		return $this->userManager->getDisplayName($uid);
 	}
 
 	/**
